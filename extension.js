@@ -1,36 +1,61 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
-const vscode = require('vscode');
+const vscode = require("vscode");
+const WebSocket = require("ws");
 
-// This method is called when your extension is activated
-// Your extension is activated the very first time the command is executed
+let wss;
+let statusBarItem;
 
-/**
- * @param {vscode.ExtensionContext} context
- */
 function activate(context) {
+  const port = 8080;
+  wss = new WebSocket.Server({ port });
 
-	// Use the console to output diagnostic information (console.log) and errors (console.error)
-	// This line of code will only be executed once when your extension is activated
-	console.log('Congratulations, your extension "vscxr" is now active!');
+  wss.on("connection", (ws) => {
+    console.log("Remote connected");
 
-	// The command has been defined in the package.json file
-	// Now provide the implementation of the command with  registerCommand
-	// The commandId parameter must match the command field in package.json
-	const disposable = vscode.commands.registerCommand('vscxr.helloWorld', function () {
-		// The code you place here will be executed every time your command is executed
+    ws.on("message", (message) => {
+      const command = message.toString();
+      handleCommand(command);
+    });
+  });
 
-		// Display a message box to the user
-		vscode.window.showInformationMessage('Hello World from vscXR!');
-	});
+  statusBarItem = vscode.window.createStatusBarItem(
+    vscode.StatusBarAlignment.Left,
+    100
+  );
+  statusBarItem.text = "$(plug) vscxr";
+  statusBarItem.tooltip = `WebSocket server running on ws://localhost:${port}`;
+  statusBarItem.command = undefined;
+  statusBarItem.show();
 
-	context.subscriptions.push(disposable);
+  context.subscriptions.push(statusBarItem);
+
+  console.log(`WebSocket server running on ws://localhost:${port}`);
 }
 
-// This method is called when your extension is deactivated
-function deactivate() {}
+function handleCommand(command) {
+  const editor = vscode.window.activeTextEditor;
+  const terminal = vscode.window.activeTerminal;
 
-module.exports = {
-	activate,
-	deactivate
+  switch (command) {
+    case "openSourceControl":
+      vscode.commands.executeCommand("workbench.view.scm");
+      break;
+    case "closeTerminal":
+      if (terminal) terminal.dispose();
+      break;
+    case "insertBraces":
+      editor?.insertSnippet(new vscode.SnippetString("{}"));
+      break;
+    case "insertPipes":
+      editor?.insertSnippet(new vscode.SnippetString("||"));
+      break;
+    default:
+      console.log("Unknown command:", command);
+  }
 }
+
+function deactivate() {
+  if (wss) wss.close();
+  if (statusBarItem) statusBarItem.dispose();
+}
+
+module.exports = { activate, deactivate };
