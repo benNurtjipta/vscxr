@@ -3,31 +3,31 @@ const WebSocket = require("ws");
 
 let wss;
 let statusBarItem;
-let isServerRunning = false; 
+let isServerRunning = false;
 
 function activate(context) {
- 
   statusBarItem = vscode.window.createStatusBarItem(
     vscode.StatusBarAlignment.Left,
     100
   );
 
- 
-  updateStatusBar(); 
+  updateStatusBar();
   statusBarItem.tooltip = "Click to toggle WebSocket server";
   statusBarItem.command = "vscxr.toggleServer";
   statusBarItem.show();
 
   context.subscriptions.push(statusBarItem);
 
- 
-  let disposable = vscode.commands.registerCommand("vscxr.toggleServer", () => {
-    if (isServerRunning) {
-      stopServer();
-    } else {
-      startServer();
+  const disposable = vscode.commands.registerCommand(
+    "vscxr.toggleServer",
+    () => {
+      if (isServerRunning) {
+        stopServer();
+      } else {
+        startServer();
+      }
     }
-  });
+  );
 
   context.subscriptions.push(disposable);
 }
@@ -35,45 +35,47 @@ function activate(context) {
 function startServer() {
   const port = 8080;
 
-  
-  wss = new WebSocket.Server({ port });
+  try {
+    wss = new WebSocket.Server({ port });
 
-  wss.on("connection", (ws) => {
-    console.log("Remote connected");
+    wss.on("connection", (ws) => {
+      console.log("Remote connected");
 
-    ws.on("message", (message) => {
-      const command = message.toString();
-      handleCommand(command);
+      ws.on("message", (message) => {
+        const command = message.toString();
+        console.log("Received command:", command);
+        handleCommand(command);
+      });
     });
-  });
 
-  
-  isServerRunning = true;
-  updateStatusBar(); /
-
-  console.log(`WebSocket server running on ws://localhost:8080`);
+    isServerRunning = true;
+    updateStatusBar();
+    console.log(`WebSocket server running on ws://localhost:${port}`);
+  } catch (error) {
+    vscode.window.showErrorMessage(`Failed to start server: ${error.message}`);
+  }
 }
 
 function stopServer() {
   if (wss) {
-    wss.close();
+    wss.close(() => {
+      console.log("WebSocket server stopped.");
+    });
     wss = null;
-    console.log("WebSocket server stopped.");
   }
 
-  
   isServerRunning = false;
-  updateStatusBar(); 
+  updateStatusBar();
 }
 
 function updateStatusBar() {
-
   if (isServerRunning) {
-    statusBarItem.text = "$(circle-filled) vscxr"; 
-    statusBarItem.color = "green"; 
+    statusBarItem.text = "$(circle-filled) vscxr";
+    statusBarItem.color = "green";
   } else {
-    statusBarItem.text = "$(circle-slash) vscxr"; 
-    statusBarItem.color = "red"; 
+    statusBarItem.text = "$(circle-slash) vscxr";
+    statusBarItem.color = "red";
+  }
 }
 
 function handleCommand(command) {
@@ -87,11 +89,20 @@ function handleCommand(command) {
     case "closeTerminal":
       if (terminal) terminal.dispose();
       break;
-    case "insertBraces":
-      editor?.insertSnippet(new vscode.SnippetString("{}"));
+    case "insertBracesLeft":
+      editor?.insertSnippet(new vscode.SnippetString("{"));
+      break;
+    case "insertBracesRight":
+      editor?.insertSnippet(new vscode.SnippetString("}"));
       break;
     case "insertPipes":
       editor?.insertSnippet(new vscode.SnippetString("||"));
+      break;
+    case "reloadWindow":
+      vscode.commands.executeCommand("workbench.action.reloadWindow");
+      break;
+    case "openCommandPalette":
+      vscode.commands.executeCommand("workbench.action.showCommands");
       break;
     default:
       console.log("Unknown command:", command);
@@ -99,7 +110,7 @@ function handleCommand(command) {
 }
 
 function deactivate() {
-  stopServer(); 
+  stopServer();
   if (statusBarItem) statusBarItem.dispose();
 }
 
