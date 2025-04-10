@@ -3,24 +3,24 @@ const WebSocket = require("ws");
 
 let wss;
 let statusBarItem;
-let isServerRunning = false; // Track the server state
+let isServerRunning = false; 
 
 function activate(context) {
-  // Create the status bar item
+ 
   statusBarItem = vscode.window.createStatusBarItem(
     vscode.StatusBarAlignment.Left,
     100
   );
 
-  // Set initial status bar text
-  updateStatusBar(); // Set the initial state of the status bar
+ 
+  updateStatusBar(); 
   statusBarItem.tooltip = "Click to toggle WebSocket server";
-  statusBarItem.command = "vscxr.toggleServer"; // Custom command for toggling
+  statusBarItem.command = "vscxr.toggleServer";
   statusBarItem.show();
 
   context.subscriptions.push(statusBarItem);
 
-  // Register the toggleServer command
+ 
   let disposable = vscode.commands.registerCommand("vscxr.toggleServer", () => {
     if (isServerRunning) {
       stopServer();
@@ -35,7 +35,7 @@ function activate(context) {
 function startServer() {
   const port = 8080;
 
-  // Start the WebSocket server
+  
   wss = new WebSocket.Server({ port });
 
   wss.on("connection", (ws) => {
@@ -47,9 +47,9 @@ function startServer() {
     });
   });
 
-  // Update the status bar when the server is started
+  
   isServerRunning = true;
-  updateStatusBar(); // Update the status bar when the server starts
+  updateStatusBar(); /
 
   console.log(`WebSocket server running on ws://localhost:8080`);
 }
@@ -61,20 +61,19 @@ function stopServer() {
     console.log("WebSocket server stopped.");
   }
 
-  // Update the status bar when the server is stopped
+  
   isServerRunning = false;
-  updateStatusBar(); // Update the status bar when the server stops
+  updateStatusBar(); 
 }
 
 function updateStatusBar() {
-  // Change icon based on server state
+
   if (isServerRunning) {
-    statusBarItem.text = "$(circle-filled) vscxr"; // Green circle when server is on
-    statusBarItem.color = "green"; // Optional: You can color the icon text
+    statusBarItem.text = "$(circle-filled) vscxr"; 
+    statusBarItem.color = "green"; 
   } else {
-    statusBarItem.text = "$(circle-slash) vscxr"; // Red circle when server is off
-    statusBarItem.color = "red"; // Optional: You can color the icon text
-  }
+    statusBarItem.text = "$(circle-slash) vscxr"; 
+    statusBarItem.color = "red"; 
 }
 
 function handleCommand(command) {
@@ -100,7 +99,7 @@ function handleCommand(command) {
 }
 
 function deactivate() {
-  stopServer(); // Ensure the server stops when deactivated
+  stopServer(); 
   if (statusBarItem) statusBarItem.dispose();
 }
 
