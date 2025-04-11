@@ -1,5 +1,7 @@
 const vscode = require("vscode");
 const WebSocket = require("ws");
+const QRCode = require("qrcode");
+const os = require("os");
 
 let wss;
 let statusBarItem;
@@ -18,7 +20,7 @@ function activate(context) {
 
   context.subscriptions.push(statusBarItem);
 
-  const disposable = vscode.commands.registerCommand(
+  const toggleCmd = vscode.commands.registerCommand(
     "vscxr.toggleServer",
     () => {
       if (isServerRunning) {
@@ -29,7 +31,11 @@ function activate(context) {
     }
   );
 
-  context.subscriptions.push(disposable);
+  const qrCmd = vscode.commands.registerCommand("vscxr.showQr", () => {
+    showQrCode();
+  });
+
+  context.subscriptions.push(toggleCmd, qrCmd);
 }
 
 function startServer() {
@@ -107,6 +113,72 @@ function handleCommand(command) {
     default:
       console.log("Unknown command:", command);
   }
+}
+
+function getLocalIpAddress() {
+  const interfaces = os.networkInterfaces();
+  for (const name of Object.keys(interfaces)) {
+    for (const iface of interfaces[name]) {
+      if (iface.family === "IPv4" && !iface.internal) {
+        return iface.address;
+      }
+    }
+  }
+  return "127.0.0.1";
+}
+
+function showQrCode() {
+  const ip = getLocalIpAddress();
+  const wsUrl = `ws://${ip}:8080`;
+
+  QRCode.toDataURL(wsUrl, (err, qrUrl) => {
+    if (err) {
+      vscode.window.showErrorMessage("Failed to generate QR code.");
+      return;
+    }
+
+    const panel = vscode.window.createWebviewPanel(
+      "vscxr.qrcode",
+      "Scan to Connect",
+      vscode.ViewColumn.One,
+      { enableScripts: true }
+    );
+
+    panel.webview.html = getQrWebviewContent(qrUrl, wsUrl);
+  });
+}
+
+function getQrWebviewContent(qrDataUrl, wsUrl) {
+  return `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <style>
+          body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            font-family: sans-serif;
+          }
+          img {
+            max-width: 300px;
+            margin: 20px 0;
+          }
+          p {
+            font-size: 14px;
+            color: #555;
+          }
+        </style>
+      </head>
+      <body>
+        <h2>Scan this QR code to connect</h2>
+        <img src="${qrDataUrl}" />
+        <p>${wsUrl}</p>
+      </body>
+    </html>
+  `;
 }
 
 function deactivate() {

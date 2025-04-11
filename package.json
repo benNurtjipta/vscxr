@@ -18,6 +18,10 @@
       {
         "command": "vscxr.helloWorld",
         "title": "Hello World"
+      },
+      {
+        "command": "vscxr.showQr",
+        "title": "Show QR Code for Remote Connection"
       }
     ]
   },
@@ -35,6 +39,7 @@
     "eslint": "^9.23.0"
   },
   "dependencies": {
+    "qrcode": "^1.5.4",
     "ws": "^8.18.1"
   }
 }
