@@ -1,5 +1,7 @@
 # vscrx
 
+![Logo](./images/logo.png)
+
 Are you lazy as i am? Don't want to press cmd+shift+p for command palette in VS Code?
 Looking for `{}` or `||` on your keyboard?
 
