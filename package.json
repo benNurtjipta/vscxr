@@ -3,7 +3,7 @@
   "displayName": "vscxr",
   "description": "remote control for vscode",
   "publisher": "benNurtjipta",
-  "icon": "/images/logo.png",
+  "icon": "images/logo.png",
   "version": "0.0.1",
   "engines": {
     "vscode": "^1.99.0"
