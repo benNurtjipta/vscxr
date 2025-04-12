@@ -1,7 +1,8 @@
 {
   "name": "vscxr",
-  "displayName": "vscXR",
-  "description": "remote control of vscode",
+  "displayName": "vscxr",
+  "description": "remote control for vscode",
+  "publisher": "benNurtjipta",
   "version": "0.0.1",
   "engines": {
     "vscode": "^1.99.0"
