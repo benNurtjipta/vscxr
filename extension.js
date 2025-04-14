@@ -6,6 +6,7 @@ const os = require("os");
 let wss;
 let statusBarItem;
 let isServerRunning = false;
+let commandMap = {}; // Stores command ID to full object
 
 function activate(context) {
   statusBarItem = vscode.window.createStatusBarItem(
@@ -48,9 +49,30 @@ function startServer() {
       console.log("Remote connected");
 
       ws.on("message", (message) => {
-        const command = message.toString();
-        console.log("Received command:", command);
-        handleCommand(command);
+        try {
+          const parsed = JSON.parse(message.toString());
+          console.log("Received message:", parsed);
+
+          if (parsed.type === "commandList" && parsed.data) {
+            // Sync commands from the Android app
+            parsed.data.forEach((cmd) => {
+              commandMap[cmd.id] = cmd;
+            });
+            console.log("Commands synced:", Object.keys(commandMap));
+          } else if (parsed.type === "executeCommand" && parsed.id) {
+            // Execute a command by ID
+            console.log(`Attempting to execute command with ID: ${parsed.id}`);
+            handleCommand(parsed.id);
+          } else {
+            console.log("Unknown message type:", parsed.type);
+          }
+        } catch (e) {
+          console.error("Failed to process message:", e.message);
+        }
+      });
+
+      ws.on("close", () => {
+        console.log("Remote disconnected");
       });
     });
 
@@ -84,34 +106,47 @@ function updateStatusBar() {
   }
 }
 
-function handleCommand(command) {
+function handleCommand(id) {
+  const cmd = commandMap[id];
+  if (!cmd) {
+    console.warn("Command not found in commandMap:", id);
+    vscode.window.showWarningMessage(`Command not found: ${id}`);
+    return;
+  }
+
   const editor = vscode.window.activeTextEditor;
   const terminal = vscode.window.activeTerminal;
 
-  switch (command) {
-    case "openSourceControl":
-      vscode.commands.executeCommand("workbench.view.scm");
+  console.log(`Executing command: ${id}`, cmd);
+
+  switch (cmd.type) {
+    case "snippet":
+      if (editor) {
+        editor.insertSnippet(new vscode.SnippetString(cmd.snippet));
+        console.log(`Snippet inserted: ${cmd.snippet}`);
+      } else {
+        vscode.window.showWarningMessage("No active editor to insert snippet.");
+      }
       break;
-    case "closeTerminal":
-      if (terminal) terminal.dispose();
+    case "terminal":
+      if (cmd.vscodeCommand === "closeTerminal" && terminal) {
+        terminal.dispose();
+        console.log("Terminal closed.");
+      } else {
+        vscode.window.showWarningMessage("No active terminal to close.");
+      }
       break;
-    case "insertBracesLeft":
-      editor?.insertSnippet(new vscode.SnippetString("{"));
-      break;
-    case "insertBracesRight":
-      editor?.insertSnippet(new vscode.SnippetString("}"));
-      break;
-    case "insertPipes":
-      editor?.insertSnippet(new vscode.SnippetString("||"));
-      break;
-    case "reloadWindow":
-      vscode.commands.executeCommand("workbench.action.reloadWindow");
-      break;
-    case "openCommandPalette":
-      vscode.commands.executeCommand("workbench.action.showCommands");
-      break;
+    case "command":
     default:
-      console.log("Unknown command:", command);
+      vscode.commands.executeCommand(cmd.vscodeCommand).then(
+        () => console.log(`Executed command: ${cmd.vscodeCommand}`),
+        (err) => {
+          console.error(`Failed to execute command ${cmd.vscodeCommand}:`, err);
+          vscode.window.showErrorMessage(
+            `Failed to execute command: ${cmd.vscodeCommand}`
+          );
+        }
+      );
   }
 }
 
